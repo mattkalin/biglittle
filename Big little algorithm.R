@@ -4,23 +4,21 @@
 # Contact: kalinmatt4@gmail.com 
 # git repository: https://github.com/mattkalin/biglittle
 
+# TODO 
+# clean up comments in functions (commented out code, for example)
 
 {
-  called.fns = NULL
   ProbVector = function(x){
-    called.fns <<- union(called.fns, "ProbVector")
     return(x / sum(x))
   }
   AddCols = function(df, new.cols, default.val = NA){
-    called.fns <<- union(called.fns, "AddCols")
     df[, new.cols] = default.val
     return(df)
   }
   MakePairs = function(people, groups, loss.fn, sample.size = 50,
                        n.sims = 5, identical.groups = FALSE, 
                        default.groups = NULL, alpha = 0.05){
-    called.fns <<- union(called.fns, "MakePairs")
-    
+
     # people is a character vector of everyone's names 
     # loss.fn is the loss function (high output is bad, low output is good)
     # capacities is EITHER 
@@ -158,7 +156,6 @@
   }
   MakePairsAux = function(groups, people, loss.fn, prob.df, n.groups, sample.size, 
                           iter.level, identical.groups, alpha = 0.05, shuffled.ppl = NA){
-    called.fns <<- union(called.fns, "MakePairsAux")
     if(isTRUE(is.na(shuffled.ppl))){
       stop("No shuffled people")
     } else {
@@ -583,7 +580,6 @@
   }
   AssignPairs = function(people, groups, n.groups, prob.df, nonzero.probs, attempt = 1, 
                          identical.groups, shuffled.ppl = NA){
-    called.fns <<- union(called.fns, "AssignPairs")
     # pick.order = sample(people, length(people))
     # if(first.first){
     #   # check if any rows in prob.df are all 1s and 0s and put those first 
@@ -722,12 +718,10 @@
     return(pairs.df)
   }
   LegalPairs = function(prob.df, pairs.df){
-    called.fns <<- union(called.fns, "LegalPairs")
     # make sure any 0 probs don't have a 1 pair
     return(!any(prob.df == 0 & pairs.df != 0))
   }
   AssignOnePair = function(person, pairs.df, capacities, probs){
-    called.fns <<- union(called.fns, "AssignOnePair")
     # person is a string representing the name of the person [REMOVED]
     # person.index is the person's index in the person vector 
     # number is the group number the person is being assigned to [REMOVED]
@@ -768,7 +762,6 @@
   GeneratePairsData = function(groups, people, prob.df, n.groups, iter.size, 
                                identical.groups, nonzero.probs, 
                                progress.bar = TRUE, shuffled.ppl = NA){
-    called.fns <<- union(called.fns, "GeneratePairsData")
     if(isTRUE(is.na(shuffled.ppl))){
       stop("No shuffled people")
     }
@@ -815,7 +808,6 @@
     # iter.size (replace with sample.size in argumetns)
   }
   OrganizePairs = function(sim.pairs, people, col.names, loss.fn, n.groups = NA){
-    called.fns <<- union(called.fns, "OrganizePairs")
     # sim.data = data.frame()
     # for (i in 1:iter.size) {
     #   sim.pairs = sim.results[[i]]
@@ -839,7 +831,6 @@
   }
   OrganizeManyPairs = function(sim.results, people, col.names, iter.size, loss.fn, 
                                iter.level = NA, progress.bar = TRUE, n.groups = NA){
-    called.fns <<- union(called.fns, "OrganizeManyPairs")
     sim.data = data.frame()
     if(is.na(n.groups)){
       n.groups = length(col.names)
@@ -878,7 +869,6 @@
   }
   ProbabilityTests = function(people, n.groups, col.names, prob.df, sim.data, 
                               identical.groups, alpha = 0.05){
-    called.fns <<- union(called.fns, "ProbabilityTests")
     # I dont think this depends on the iteration order, 
     # so I am going to leave out shuffled.ppl 
     # print(alpha)
@@ -974,7 +964,6 @@
     return(new.probs)
   }
   SingleProbTest = function(loss.data, test.index){
-    called.fns <<- union(called.fns, "SingleProbTest")
     return(ifelse(length(test.index) == 0, 0, 
                   tryCatch({
                     t.test(loss.data[test.index], loss.data[-test.index], 
@@ -985,7 +974,6 @@
     )
   }
   CalcNonzeroProbs = function(prob.df, col.names = NA){
-    called.fns <<- union(called.fns, "CalcNonzeroProbs")
     if(isTRUE(is.na(col.names))){
       col.names = names(prob.df[-1])
     }
@@ -996,7 +984,6 @@
     return(nonzero.probs)
   }
   FindOverfullGroups = function(prob.df, groups, n.groups){
-    called.fns <<- union(called.fns, "FindOverfullGroups")
     overfull.groups = numeric()
     for (i in 1:n.groups) {
       if(sum(prob.df[, paste("Group", i)] == 1) > groups[i]){
