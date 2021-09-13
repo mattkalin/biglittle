@@ -5,7 +5,7 @@
 # git repository: https://github.com/mattkalin/biglittle
 
 # TODO 
-# clean up comments in functions (commented out code, for example)
+# make an outline for video commentary 
 
 {
   ProbVector = function(x){
@@ -17,82 +17,45 @@
   }
   MakePairs = function(people, groups, loss.fn, sample.size = 50,
                        n.sims = 5, identical.groups = FALSE, 
-                       default.groups = NULL, alpha = 0.05){
+                       default.groups = NULL, alpha = 0.05, group.names = NA){
 
     # people is a character vector of everyone's names 
     # loss.fn is the loss function (high output is bad, low output is good)
-    # capacities is EITHER 
-    # a vector of the same length as groups that represents the capacity of each group OR
-    # an integer representing the number of groups
-    # first.first: if TRUE, A will always be placed in group 1
-    
-    # consider making iter.size = 50 (or other constant) * n.groups 
+
     start.time <<- Sys.time()
     library(dplyr)
     n.groups = length(groups)
-    # iter.size = sample.size * n.groups
     if(n.groups == 1){
       n.groups = groups
       groups = rep(ceiling(length(people)/n.groups), n.groups)
-    } # else {
-    #   n.groups = length(groups)
-    # }
-    # if(identical.groups & is.null(default.groups)){
-    #   prob.df = vector('list', length = length(people))
-    #   names(prob.df) = people
-    #   # ban list 
-    # } else {
-    col.names = paste("Group", 1:n.groups)
+    } 
+    if(is.na(group.names)){
+      col.names = paste("Group", 1:n.groups)
+    } else {
+      col.names = group.names
+    }
     prob.df = data.frame("Person" = people) %>% 
       AddCols(col.names, 1/n.groups)
-    # }
     if(!is.null(default.groups)){
       for (p in names(default.groups)) {
         p.grp = default.groups[[p]]
         p.index = match(p, people)
         prob.df[p.index, col.names] = 0
-        prob.df[p.index, paste("Group", p.grp)] = 1 / length(p.grp)
+        prob.df[p.index, col.names[p.grp]] = 1 / length(p.grp)
       }
-      # for (i in 1:nrow(default.groups)) {
-      #   row.index = match(default.groups[i, "Person"], people)
-      #   prob.df[row.index, col.names] = 0
-      #   prob.df[row.index, paste("Group", default.groups[i, "Group"])] = 1
-      # }
     }
     default.prob.df <<- prob.df
-    # consider making it weighted based on the groups' capacities 
-    # ex: more likely to be placed in bigger group 
-    # although I think that's gonna happen anyway tbh 
-    
-    # if(first.first){
-    #   prob.df[1, col.names] = c(1, rep(0, n.groups - 1))
-    # }
-    # top.total = iter.size * top.prop # the total number of sims in the top proportion
     answers = vector('list', n.sims)
     best.pairs = vector('list', 2)
     best.pairs$Loss = Inf
     for (k in 1:n.sims) {
       sim.num <<- k
-      # answers[[k]]$Pairs = guess.answer
       print(paste("Simulation", k))
-      answers[[k]]$Pairs = # tryCatch({
+      answers[[k]]$Pairs = 
         MakePairsAux(groups, people, loss.fn, prob.df, n.groups, sample.size, 
-                     # top.total, conv.diff, 
-                     1, 
-                     # first.first, method, 
-                     identical.groups, alpha, shuffled.ppl = 
+                     1, identical.groups, alpha, shuffled.ppl = 
                        ifelse(rep(identical.groups, length(people)), 
-                              sample(people), people))
-      # }, error = function(e){
-      # print("Error in MakePairsAux, trying again")
-      # return(MakePairsAux(groups, people, loss.fn, prob.df, n.groups, sample.size, 
-      #                     # top.total, conv.diff, 
-      #                     1, 
-      #                     # first.first, method, 
-      #                     identical.groups))
-      #   stop(e)
-      # })
-      
+                              sample(people), people), col.names)
       if(!is.null(answers[[k]]$Pairs$Sim.data)){
         return(answers[[k]]$Pairs)
       }
@@ -111,7 +74,7 @@
       new.pairs = data.frame("Person" = people) %>% 
         AddCols(col.names, 0)
       for (i in 1:length(people)) {
-        new.pairs[i, paste("Group", best.row[, i])] = 1
+        new.pairs[i, col.names[best.row[, i]]] = 1
       }
       best.pairs$Pairs = new.pairs
       best.pairs$Loss = min.loss
@@ -125,7 +88,6 @@
       }
     }
     answers <<- answers
-    # answer = best.pairs$Pairs
     if(best.freq <= 1){
       if(best.freq == 1){
         print(paste("Only one simulation arrived at the best answer found, so there is a", 
@@ -143,7 +105,6 @@
       print(paste(best.freq, 
                   "different simulations arrived at this answer, so there is a", 
                   "good chance it is the one that minimizes the loss function"))
-      # return(best.pairs$Pairs)
     }
     print("Best answer:")
     print(best.pairs$Pairs)
@@ -155,7 +116,8 @@
     
   }
   MakePairsAux = function(groups, people, loss.fn, prob.df, n.groups, sample.size, 
-                          iter.level, identical.groups, alpha = 0.05, shuffled.ppl = NA){
+                          iter.level, identical.groups, alpha = 0.05, shuffled.ppl = NA, 
+                          col.names = NA){
     if(isTRUE(is.na(shuffled.ppl))){
       stop("No shuffled people")
     } else {
@@ -165,79 +127,43 @@
       global.shuffled.ppl <<- shuffled.ppl
     }
     # probs is the probability matrix of people being placed in a given group 
-    # for the first iteration, each entry is 1/groups
+    # for this iteration, each entry is 1/groups
     print(paste0("Iteration ", iter.level, " (Sim ", sim.num, ")"))
     prob.df <<- prob.df
     
-    # preserve: nonzero.probs (argument), loss.results (do later)
-    # iter.size (replace with sample.size in argumetns)
-    
-    # START REPLACEMENT FUNCTION HERE
-    # args: groups, people, prob.df, n.groups, sample.size, identical.groups
-    # do loss function calculations when organizing the sim.data df 
-    col.names = paste("Group", 1:n.groups)
-    # pairs.totals = data.frame("Person" = people) %>% 
-    #   AddCols(col.names, 0)
-    # sim.results = vector('list', length = iter.size)
-    # loss.results = vector('numeric', length = iter.size)
-    if(class(prob.df) == 'list'){
-      nonzero.probs = numeric()
-      # prob.df is ban.list, nonzero.probs is team.bans
-      for (i in 1:length(prob.df)) {
-        nonzero.probs[i] = length(prob.df[[i]])
-      }
-      iter.size = round(sample.size * 
-                          (length(people) - 1 - mean(nonzero.probs) / 2) / mean(groups - 1))
-    } else {
-      nonzero.probs = CalcNonzeroProbs(prob.df, col.names)
-      err = FALSE
-      # tryCatch({
-      #   combo.upper.bound = EstimateCombinations(prob.df, groups)
-      # }, error = function(e){
-      #   err <<- TRUE
-      #   print(e$message)
-      # })
-      combo.upper.bound = Inf # trying a different approach 
-      if(err){
-        if(identical.groups){
-          print(("Restarting with new people shuffle"))
-          new.sample.size = sample.size
-        } else {
-          print(("Restarting with doubled sample size"))
-          new.sample.size = sample.size * 2
-        }
-        
-        # maybe just continue where it is now instead of completely restarting 
-        # new.probs = data.frame("Person" = people) %>% 
-        #   AddCols(col.names, 1/n.groups)
-        default.prob.df
-        return(MakePairsAux(groups, people, loss.fn, new.probs, n.groups, 
-                            new.sample.size, 
-                            # top.total, conv.diff, 
-                            1, 
-                            # first.first, 2, 
-                            identical.groups, alpha, shuffled.ppl = 
-                              ifelse(rep(identical.groups, length(people)), 
-                                     sample(people), people)))
+    if(is.na(col.names)){
+      col.names = paste("Group", 1:n.groups)
+    }
+    nonzero.probs = CalcNonzeroProbs(prob.df, col.names)
+    err = FALSE
+    combo.upper.bound = Inf 
+    if(err){
+      if(identical.groups){
+        print(("Restarting with new people shuffle"))
+        new.sample.size = sample.size
+      } else {
+        print(("Restarting with doubled sample size"))
+        new.sample.size = sample.size * 2
       }
       
-      low.combos = combo.upper.bound < (n.groups * sample.size / 5)
-      if(low.combos){
-        iter.size = combo.upper.bound * 10
-      } else {
-        iter.size = round((n.groups + mean(nonzero.probs)) / 2 * sample.size)
-      }
-    } # nonzero probabilities
-    # iter.size = round((2 * n.groups - sum(prob.df == 0)/length(people)) / 2) * sample.size
+      # default.prob.df
+      return(MakePairsAux(groups, people, loss.fn, new.probs, n.groups, 
+                          new.sample.size, 
+                          1, identical.groups, alpha, shuffled.ppl = 
+                            ifelse(rep(identical.groups, length(people)), 
+                                   sample(people), people)), col.names)
+    }
+    
+    low.combos = combo.upper.bound < (n.groups * sample.size / 5)
+    if(low.combos){
+      iter.size = combo.upper.bound * 10
+    } else {
+      iter.size = round((n.groups + mean(nonzero.probs)) / 2 * sample.size)
+    }
     print(paste("Size:", iter.size))
     
     
-    # for (i in 1:iter.size) {
-    #   sim.pairs = AssignPairs(people, groups, n.groups, prob.df, nonzero.probs, 
-    #                           identical.groups = identical.groups)
-    #   loss.results[i] = loss.fn(sim.pairs, groups, n.groups)
-    #   sim.results[[i]] = sim.pairs
-    # }
+    
     tryCatch({
       sim.results = GeneratePairsData(groups, people, prob.df, n.groups, 
                                       iter.size, identical.groups, nonzero.probs, 
@@ -249,149 +175,15 @@
     })
     if(err){
       print("Error generating pairs, restarting simulation with new shuffle")
-      # new.probs = data.frame("Person" = people) %>% 
-      #   AddCols(col.names, 1/n.groups)
       new.probs = default.prob.df
       return(MakePairsAux(groups, people, loss.fn, new.probs, n.groups, 
                           sample.size, 
-                          # top.total, conv.diff, 
-                          1, 
-                          # first.first, 2, 
-                          identical.groups, alpha, shuffled.ppl = 
+                          1, identical.groups, alpha, shuffled.ppl = 
                             ifelse(rep(identical.groups, length(people)), 
-                                   sample(people), people)))
+                                   sample(people), people)), col.names)
     }
-    # if(method == 1){
-    # recursive simulation (original method)
-    
-    # loss.ranks = rank(loss.results)
-    # top.pairs = sim.results[which(loss.ranks <= top.total)]
-    # if(length(top.pairs) == 0){
-    #   top.index = which(loss.ranks <= top.total)
-    #   for (i in 1:iter.size) {
-    #     if(loss.ranks[i] <= top.total){
-    #       top.pairs = c(top.pairs, sim.results[[i]])
-    #     }
-    #   }
-    # }
-    # # if(length(top.pairs) < top.total / 2){
-    # #   loss.results <<- loss.results
-    # #   sim.results <<- sim.results
-    # #   top.pairs <<- top.pairs
-    # #   print(paste("Top pairs length",length(top.pairs)))
-    # #   print(loss.ranks)
-    # #   stop(paste("top.pairs of length", length(top.pairs)))
-    # #   # return(MakePairsAux(groups, people, loss.fn, prob.df, n.groups, iter.size, 
-    # #   #                     top.prop, conv.diff, iter.level))
-    # # } else {
-    # top.total = length(top.pairs)
-    # # }
-    # for (i in 1:top.total) {
-    #   # tryCatch({
-    #   pairs.totals[, col.names] = pairs.totals[, col.names] + top.pairs[[i]][, col.names]
-    #   # }, error = function(e){
-    #   #   print(paste("i =", i))
-    #   #   print(paste("top.total =", top.total))
-    #   #   error <<- e
-    #   #   print(e)
-    #   # })
-    #   
-    # }
-    # new.probs = pairs.totals %>% 
-    #   mutate_at(col.names, function(x) x / top.total) # this should work but not 100% sure 
-    # prob.diff = new.probs[, col.names] - prob.df[, col.names]
-    # if(any(abs(prob.diff) > conv.diff)){
-    #   # abs.prob.diff = abs(unlist(prob.diff))
-    #   # print(paste("Mean diff =", mean(abs.prob.diff)))
-    #   # print(paste("Max diff =", max(abs.prob.diff)))
-    #   all.prob.diff[[iter.level]] <<- prob.diff
-    #   return(MakePairsAux(groups, people, loss.fn, new.probs, n.groups, sample.size, 
-    #                       top.total, conv.diff, iter.level + 1, first.first))
-    # } else {
-    #   # also have it stop if each row has a 1 and 0s 
-    #   return(new.probs)
-    # }
-    # } else if(method == 2){
     sim.data = OrganizeManyPairs(sim.results, people, col.names, iter.size, 
                                  loss.fn, iter.level, n.groups = n.groups)
-    # sim.data = data.frame()
-    # for (i in 1:iter.size) {
-    #   sim.pairs = sim.results[[i]]
-    #   sim.row = data.frame()
-    #   for (p in 1:length(people)) {
-    #     sim.row[1, paste(people[p], "Group")] = match(1, sim.pairs[p, col.names])
-    #   }
-    #   sim.row$Loss = loss.fn(sim.pairs, groups, n.groups)
-    #   sim.data = sim.data %>% rbind(sim.row)
-    # }
-    # sim.data$Iter = iter.level
-    # tryCatch({
-    #   all.pairs.data <<- rbind(all.pairs.data, sim.data)
-    # }, error = function(e){
-    #   all.pairs.data <<- sim.data
-    # })
-    
-    # model.people = head(people, -1)
-    # if(first.first){
-    #   model.people = model.people[-1]
-    # } 
-    # model.formula = paste("Loss ~", paste0("factor(`", model.people, " Group`)",
-    #                                        collapse = " + ")) %>% 
-    #   as.formula()
-    # m = lm(model.formula, data = sim.data)
-    # linear regression approach didn't work 
-    
-    # group.levels = as.character(1:n.groups)
-    # for (p in 1:length(people)) {
-    #   curr.probs = prob.df[p, col.names]
-    #   if(all(curr.probs %in% c(0, 1))){
-    #     new.probs[p, col.names] = curr.probs
-    #   } else {
-    #     group.col.name = paste(people[p], "Group")
-    #     sim.data[, group.col.name] = sim.data[, group.col.name] %>% 
-    #       as.factor()
-    #     # group.levels = levels(sim.data[, group.col.name])
-    #     loss.given.group = vector('list', length = length(group.levels))
-    #     # unpooled.variance = 0
-    #     # sample.means = numeric()
-    #     
-    #     # mu0 = mean(sim data Loss)
-    #     # xbar = mean(sim data Loss for specific group)
-    #     # h0: mu = mu0 (where mu is derived from xbar)
-    #     # ha: mu < mu0
-    #     
-    #     p.vals = numeric()
-    #     for (g in group.levels) {
-    #       loss.given.group[[g]] = sim.data %>% 
-    #         filter_at(group.col.name, function(x) x == g) %>% 
-    #         select(Loss) %>% 
-    #         unlist()
-    #       # unpooled.variance = unpooled.variance + 
-    #       #   sd(loss.given.group[[g]]) ^ 2 / length(loss.given.group[[g]])
-    #       # sample.means[g] = mean(loss.given.group[[g]])
-    #       
-    #       # eilminate pairings that associate with worse than average loss values 
-    #       if(length(loss.given.group[[g]]) < 1){
-    #         p.vals[[g]] = 0
-    #       } else {
-    #         tryCatch({
-    #           test.result = t.test(loss.given.group[[g]], mu = mean(sim.data$Loss), 
-    #                                alternative = 'greater')
-    #           p.vals[[g]] = test.result$p.value
-    #         }, error = function(e){
-    #           p.vals[[g]] <<- 0.5
-    #         })
-    #         
-    #       }
-    #       # if(p.vals[[g]] > pValueThreshold){
-    #       #   p.vals[[g]] = 1
-    #       # }
-    #     }
-    #     # new.probs[p, col.names] = (1 - p.vals) / sum(1 - p.vals)
-    #     new.probs[p, col.names] = ifelse(p.vals < (0.05), 0, 1) %>% 
-    #       ProbVector()
-    #   }
-    # }
     old.prob.df = prob.df
     distinct.pairs = sim.data %>% 
       mutate(Index = 1:nrow(sim.data)) %>% 
@@ -434,80 +226,14 @@
                   "permutations, so the one with the best loss was chosen"))
       new.probs = sim.results[[match(min(sim.data$Loss), sim.data$Loss)]]
     } else {
-      if(identical.groups){
-        if(class(prob.df) == 'data.frame'){
-          new.data = tryCatch({
-            SetGroups(people, n.groups, col.names, prob.df, sim.data, 
-                      alpha, shuffled.ppl = shuffled.ppl)
-          }, error = function(e){
-            error.info <<- list('prob.df' = prob.df, 'sim.data' = sim.data, 
-                                'shuffled.ppl' = shuffled.ppl)
-          })
-          
-          prob.df = new.data$Prob.df
-          sim.data = new.data$Sim.data
-        } 
-        
-        # remove identical groups stuff from other parts of algorithm 
+
+      new.probs = ProbabilityTests(people, n.groups, col.names, prob.df,
+                                   sim.data, identical.groups, alpha)
+      overfull.groups = FindOverfullGroups(new.probs, groups, n.groups)
+      if(length(overfull.groups) > 0){
+        new.probs = FixOverfullGroups(prob.df, new.probs, overfull.groups, sim.data,
+                                      groups, n.groups, people, alpha)
       }
-      if(class(prob.df) == 'data.frame'){
-        new.probs = ProbabilityTests(people, n.groups, col.names, prob.df, 
-                                     sim.data, identical.groups, alpha)
-        overfull.groups = FindOverfullGroups(new.probs, groups, n.groups)
-        if(length(overfull.groups) > 0){
-          # x <<- list("New.Probs" = new.probs, 
-          #         "Old.Probs" = prob.df, 
-          #         "Sim.Data" = sim.data)
-          # stop("Info saved in x")
-          new.probs = FixOverfullGroups(prob.df, new.probs, overfull.groups, sim.data, 
-                                        groups, n.groups, people, alpha)
-        }
-      } else {
-        new.ban.list = PeoplePairTests(sim.data, people, prob.df, alpha)
-        global.ban.list <<- new.ban.list
-      }
-      
-    }
-    if(class(prob.df) == 'list'){
-      ban.list = prob.df
-      if(ListsEqual(ban.list, new.ban.list)){
-        print("No progress made in iteration, generating more data")
-        sim.data = GeneratePairsData(groups, people, prob.df, n.groups, 
-                                     iter.size, identical.groups, nonzero.probs) %>% 
-          OrganizeManyPairs(people, col.names, iter.size, loss.fn, iter.level) %>% 
-          rbind(sim.data)
-        new.ban.list = PeoplePairTests(people, n.groups, col.names, prob.df, sim.data, alpha)
-      }
-      # PrintList(new.ban.list)
-      # I should prob print something tbh, but idk
-      if(ListsEqual(ban.list, new.ban.list)){
-        print("No progress made in iteration, restarting with doubled sample size")
-        return(MakePairsAux(groups, people, loss.fn, list(), n.groups, 
-                            sample.size * 2, 
-                            # top.total, conv.diff, 
-                            1, 
-                            # first.first, 2, 
-                            identical.groups, alpha))
-      }
-      group.leaders = FindCliques(new.ban.list, n.groups, people, print.msg = TRUE)
-      
-      if(length(group.leaders) == 0){
-        return(MakePairsAux(groups, people, loss.fn, new.ban.list, n.groups, sample.size, 
-                            # top.total, conv.diff, 
-                            iter.level + 1, 
-                            # first.first, 2, 
-                            identical.groups, alpha))
-      } else {
-        group.leaders = group.leaders[[1]] # don't think it matters much 
-        prob.df = BuildProbDfFromBanList(ban.list, group.leaders, 
-                                         n.groups, people, col.names)
-        return(MakePairsAux(groups, people, loss.fn, prob.df, n.groups, sample.size, 
-                            # top.total, conv.diff, 
-                            iter.level + 1, 
-                            # first.first, 2, 
-                            identical.groups, alpha))
-      }
-      # finish this 
     }
     tryCatch({
       if(all(unlist(new.probs == prob.df))){
@@ -524,7 +250,6 @@
       error.info <<- list("new.probs" = new.probs, "prob.df" = prob.df, 
                           "sim.data" = sim.data)
     })
-    
     
     print(new.probs)
     set.people = people[which(new.probs == 1, arr.ind = TRUE)[,1]]
@@ -551,42 +276,22 @@
         new.sample.size = sample.size * 2
       }
       
-      # maybe just continue where it is now instead of completely restarting 
-      # new.probs = data.frame("Person" = people) %>% 
-      #   AddCols(col.names, 1/n.groups)
       new.probs = default.prob.df
       return(MakePairsAux(groups, people, loss.fn, new.probs, n.groups, 
                           new.sample.size, 
-                          # top.total, conv.diff, 
-                          1, 
-                          # first.first, 2, 
-                          identical.groups, alpha, shuffled.ppl = 
+                          1, identical.groups, alpha, shuffled.ppl = 
                             ifelse(rep(identical.groups, length(people)), 
                                    sample(people), people)))
-      # return(MakePairs(people, groups, loss.fn, sample.size * 2, 
-      #                  conv.diff = conv.diff, first.first = first.first, method = 2, 
-      #                  n.sims = 1))
     } else if(all(unlist(new.probs[, col.names]) %in% c(0, 1))){
       return(new.probs)
     } else {
       return(MakePairsAux(groups, people, loss.fn, new.probs, n.groups, sample.size, 
-                          # top.total, conv.diff, 
-                          iter.level + 1, 
-                          # first.first, 2, 
-                          identical.groups, alpha, shuffled.ppl = shuffled.ppl))
+                          iter.level + 1, identical.groups, alpha, 
+                          shuffled.ppl = shuffled.ppl))
     }
-    # }
-    
   }
   AssignPairs = function(people, groups, n.groups, prob.df, nonzero.probs, attempt = 1, 
-                         identical.groups, shuffled.ppl = NA){
-    # pick.order = sample(people, length(people))
-    # if(first.first){
-    #   # check if any rows in prob.df are all 1s and 0s and put those first 
-    #   # pass it in as an argument  
-    #   pick.order = pick.order[pick.order != people[1]] %>% 
-    #     append(people[1], after = 0)
-    # }
+                         identical.groups, shuffled.ppl = NA, col.names){
     if(isTRUE(is.na(shuffled.ppl))){
       stop("No shuffled people")
     }
@@ -598,7 +303,9 @@
     for (i in order.tiers) {
       pick.order = c(pick.order, sample(people[which(nonzero.probs == i)]))
     }
-    col.names = paste("Group", 1:n.groups)
+    if(is.na(col.names)){
+      col.names = paste("Group", 1:n.groups)
+    }
     pairs.df = data.frame("Person" = people) %>% 
       AddCols(col.names, 0)
     capacities = groups
@@ -609,9 +316,6 @@
         ret.list = AssignOnePair(person, pairs.df, capacities, probs) 
         capacities = ret.list$Capacities
         pairs.df = ret.list$Pairs
-        # if(pick.order[1] == "Jonas"){
-        #   stop("Jonas is first, this is just a debugging tool")
-        # }
       }
     }, error = function(e){
       if(attempt > 50){
@@ -638,83 +342,49 @@
       print(prob.df)
       stop("Illegal pairing")
     }
-    # if(any(pairs.df[10, 2:3] != 0)){
-    #   print(pairs.df)
-    #   print(prob.df)
-    #   print("Illegal pairing for DEN")
-    #   stop("Illegal pairing for DEN")
-    # }
     if(!LegalPairs(prob.df, pairs.df)){
       print(pairs.df)
       print(prob.df)
       stop("Illegal pairing")
     }
-    # bug: 
-    # example: H can go to group 3 but not group 2
-    # H is placed in group 3
-    # group 2 and 3 are swtiched in the identical.groups step
-    # H is now in group 2
-    # potential fixes: 
-    # 1
-    # do itentical.groups in AssignOnePair, and if group 2 is empty, put there instead of 3
-    # drawback: need to rework the pick.order step 
-    # 2
     
-    if(identical.groups){ # PREVIOUSLY: if(identical.groups)
-      # THIS ONLY APPLIES TO GROUPS OF SAME SIZE 
-      # lead person is the person in each group listed first in 'people' 
-      
-      set.groups = which(prob.df == 1, arr.ind = TRUE)[,2] %>% unique() - 1
-      free.groups = setdiff(1:n.groups, set.groups)
-      group.sizes = numeric()
-      lead.people = character()
-      for (i in 1:n.groups) {
-        group.index = match(people[which(pairs.df[, paste("Group", i)] == 1)], 
-                            shuffled.ppl)
-        group.sizes[i] = length(group.index)
-        if(group.sizes[i] > 0){
-          lead.people[i] = shuffled.ppl[min(group.index)]
-        }
-        
-      }
-      unq.group.sizes = unique(groups)
-      new.groups = numeric()
-      new.groups[set.groups] = set.groups
-      # make it so if a team is locked into a group they stay there 
-      for (j in unq.group.sizes) {
-        # case where group is of size 0 and lead person is na
-        group.nums = which(groups == j)
-        free.new.groups = group.nums[which(group.nums %in% free.groups)]
-        new.groups[free.new.groups] = free.new.groups[rank(match(lead.people[free.new.groups], 
-                                                                 shuffled.ppl))]
-      }
-      new.pairs = pairs.df
-      for (i in 1:n.groups) {
-        new.pairs[, paste("Group", new.groups[i])] = pairs.df[, paste("Group", i)]
-      }
-      prob.df <<- prob.df
-      pairs.df <<- pairs.df
-      if(LegalPairs(prob.df, new.pairs)){
-        pairs.df = new.pairs
-      } else {
-        stop("Could not reorder groups")
-        # adj.matrix = matrix(nrow = n.groups, ncol = n.groups, data = 0)
-        # eligible.groups = list()
-        # for (i in 1:n.groups) {
-        #   member.rows = prob.df[which(pairs.df[, paste("Group", i)] == 1), ]
-        #   eligible.groups[[i]] = numeric()
-        #   for (j in 1:n.groups) {
-        #     if(j != i && all(member.rows[, paste("Group", j)] > 0)){
-        #       adj.matrix[i, j] = 1
-        #       eligible.groups[[i]] = c(eligible.groups[[i]], j)
-        #       # i is src, j is dest 
-        #     }
-        #   }
-        #   # eligible.groups[[i]] = sort(eligible.groups[[i]], method = 'bubble')
-        # }
-        # 
-      }
-    }
+    # if(identical.groups){ 
+    #   set.groups = which(prob.df == 1, arr.ind = TRUE)[,2] %>% unique() - 1
+    #   free.groups = setdiff(1:n.groups, set.groups)
+    #   group.sizes = numeric()
+    #   lead.people = character()
+    #   for (i in 1:n.groups) {
+    #     group.index = match(people[which(pairs.df[, paste("Group", i)] == 1)], 
+    #                         shuffled.ppl)
+    #     group.sizes[i] = length(group.index)
+    #     if(group.sizes[i] > 0){
+    #       lead.people[i] = shuffled.ppl[min(group.index)]
+    #     }
+    #     
+    #   }
+    #   unq.group.sizes = unique(groups)
+    #   new.groups = numeric()
+    #   new.groups[set.groups] = set.groups
+    #   # make it so if a person is locked into a group they stay there 
+    #   for (j in unq.group.sizes) {
+    #     # case where group is of size 0 and lead person is na
+    #     group.nums = which(groups == j)
+    #     free.new.groups = group.nums[which(group.nums %in% free.groups)]
+    #     new.groups[free.new.groups] = free.new.groups[rank(match(lead.people[free.new.groups], 
+    #                                                              shuffled.ppl))]
+    #   }
+    #   new.pairs = pairs.df
+    #   for (i in 1:n.groups) {
+    #     new.pairs[, paste("Group", new.groups[i])] = pairs.df[, paste("Group", i)]
+    #   }
+    #   prob.df <<- prob.df
+    #   pairs.df <<- pairs.df
+    #   if(LegalPairs(prob.df, new.pairs)){
+    #     pairs.df = new.pairs
+    #   } else {
+    #     stop("Could not reorder groups")
+    #   }
+    # }
     return(pairs.df)
   }
   LegalPairs = function(prob.df, pairs.df){
@@ -722,15 +392,10 @@
     return(!any(prob.df == 0 & pairs.df != 0))
   }
   AssignOnePair = function(person, pairs.df, capacities, probs){
-    # person is a string representing the name of the person [REMOVED]
-    # person.index is the person's index in the person vector 
-    # number is the group number the person is being assigned to [REMOVED]
+    # person is a string representing the name of the person 
     # pairs.df is a data frame
-    # first column is a list of all the people's names
-    # next columns are binary: 1 if person is in group, 0 if they're in another group
-    # NA if not yet assigned 
     # capacities is an integer vector representing the groups' capacities
-    # probs is a vector for the probability the person is placed in each huse
+    # probs is a vector for the probability the person is placed in each group
     
     available.groups = which(capacities > 0)
     new.probs = probs[available.groups]
@@ -761,22 +426,15 @@
   }
   GeneratePairsData = function(groups, people, prob.df, n.groups, iter.size, 
                                identical.groups, nonzero.probs, 
-                               progress.bar = TRUE, shuffled.ppl = NA){
+                               progress.bar = TRUE, shuffled.ppl = NA, col.names){
     if(isTRUE(is.na(shuffled.ppl))){
       stop("No shuffled people")
     }
-    col.names = paste("Group", 1:n.groups)
-    # pairs.totals = data.frame("Person" = people) %>% 
-    #   AddCols(col.names, 0)
+    if(is.na(col.names)){
+      col.names = paste("Group", 1:n.groups)
+    }
     sim.results = vector('list', length = iter.size)
-    # loss.results = vector('numeric', length = iter.size)
-    # {
-    #   nonzero.probs = numeric()
-    #   for (i in 1:nrow(prob.df)) {
-    #     nonzero.probs[i] = sum(prob.df[i, col.names] != 0)
-    #   }
-    # } # nonzero probabilities
-    # iter.size = round((n.groups + mean(nonzero.probs)) / 2 * sample.size)
+    
     if(progress.bar){
       print("Generating pairs data...")
       tryCatch({
@@ -791,10 +449,9 @@
       
     }
     for (i in 1:iter.size) {
-      # loss.results[i] = loss.fn(sim.pairs, groups, n.groups)
       sim.results[[i]] = AssignPairs(people, groups, n.groups, prob.df, 
                                      nonzero.probs, 1, identical.groups, 
-                                     shuffled.ppl = shuffled.ppl)
+                                     shuffled.ppl = shuffled.ppl, col.names)
       if(progress.bar){
         setTxtProgressBar(pb, i)
       }
@@ -803,14 +460,8 @@
       close(pb)
     }
     return(sim.results)
-    
-    # preserve: nonzero.probs (argument), loss.results (do later)
-    # iter.size (replace with sample.size in argumetns)
   }
   OrganizePairs = function(sim.pairs, people, col.names, loss.fn, n.groups = NA){
-    # sim.data = data.frame()
-    # for (i in 1:iter.size) {
-    #   sim.pairs = sim.results[[i]]
     if(is.na(n.groups)){
       n.groups = length(col.names)
     }
@@ -819,19 +470,10 @@
       sim.row[1, paste(people[p], "Group")] = match(1, sim.pairs[p, col.names])
     }
     sim.row$Loss = loss.fn(sim.pairs, groups, n.groups)
-    #   sim.data = sim.data %>% rbind(sim.row)
-    # }
-    # sim.data$Iter = iter.level
-    # tryCatch({
-    #   all.pairs.data <<- rbind(all.pairs.data, sim.data)
-    # }, error = function(e){
-    #   all.pairs.data <<- sim.data
-    # })
     return(sim.row)
   }
   OrganizeManyPairs = function(sim.results, people, col.names, iter.size, loss.fn, 
                                iter.level = NA, progress.bar = TRUE, n.groups = NA){
-    sim.data = data.frame()
     if(is.na(n.groups)){
       n.groups = length(col.names)
     }
@@ -843,15 +485,16 @@
       print("Organizing pairs into a data frame and calculating loss...")
       pb = txtProgressBar(min = 0, max = iter.size, style = 3)
     }
+    sim.data = data.frame()
+    # first.row = OrganizePairs(sim.results[[i]], people, col.names, loss.fn, n.groups)
+    # sim.data = matrix(nrow = iter.size, ncol = ncol(first.row)) %>% 
+    #   as.data.frame() %>% 
+    #     `colnames<-`(names(first.row))
     for (i in 1:iter.size) {
       sim.pairs = sim.results[[i]]
-      # sim.row = data.frame()
-      # for (p in 1:length(people)) {
-      #   sim.row[1, paste(people[p], "Group")] = match(1, sim.pairs[p, col.names])
-      # }
-      # sim.row$Loss = loss.fn(sim.pairs, groups, n.groups)
       sim.row = OrganizePairs(sim.pairs, people, col.names, loss.fn, n.groups)
       sim.data = sim.data %>% rbind(sim.row)
+      # sim.data[i, ] = sim.row
       if(progress.bar){
         setTxtProgressBar(pb, i)
       }
@@ -869,9 +512,6 @@
   }
   ProbabilityTests = function(people, n.groups, col.names, prob.df, sim.data, 
                               identical.groups, alpha = 0.05){
-    # I dont think this depends on the iteration order, 
-    # so I am going to leave out shuffled.ppl 
-    # print(alpha)
     new.probs = prob.df 
     group.levels = 1:n.groups
     if(identical.groups){
@@ -888,51 +528,12 @@
         new.probs[p, col.names] = curr.probs
       } else {
         group.col.name = paste(people[p], "Group")
-        # sim.data[, group.col.name] = sim.data[, group.col.name] %>% 
-        #   as.factor()
-        # loss.given.group = vector('list', length = length(group.levels))
-        # group.levels = levels(sim.data[, group.col.name])
-        # unpooled.variance = 0
-        # sample.means = numeric()
-        
         # mu0 = mean(sim data Loss)
         # xbar = mean(sim data Loss for specific group)
         # h0: mu = mu0 (where mu is derived from xbar)
         # ha: mu < mu0
         
         p.vals = numeric()
-        # for (g in group.levels) {
-        #   if(g %in% set.groups){
-        #     loss.given.group[[g]] = sim.data %>% 
-        #       filter_at(group.col.name, function(x) x == g) %>% 
-        #       select(Loss) %>% 
-        #       unlist()
-        #     # unpooled.variance = unpooled.variance + 
-        #     #   sd(loss.given.group[[g]]) ^ 2 / length(loss.given.group[[g]])
-        #     # sample.means[g] = mean(loss.given.group[[g]])
-        #     
-        #     # eilminate pairings that associate with worse than average loss values 
-        #     if(length(loss.given.group[[g]]) < 1){
-        #       p.vals[g] = 0
-        #     } else {
-        #       tryCatch({
-        #         test.result = t.test(loss.given.group[[g]], mu = mean(sim.data$Loss), 
-        #                              alternative = 'greater')
-        #         p.vals[g] = test.result$p.value
-        #       }, error = function(e){
-        #         p.vals[g] <<- 0.5
-        #       })
-        #     }
-        #   } else {
-        #     p.vals[g] = 0.5
-        #   }
-        ### delete
-        # g6 = numeric()
-        # for (p in people) {
-        #   g6[p] = mean(sim.data[which(sim.data[, paste(p, "Group")] == 6), "Loss"])
-        # }
-        # g6 = g6[which(!is.nan(g6))] %>% sort
-        ### delete
         for (g in set.groups) {
           p.vals[g] = SingleProbTest(sim.data$Loss, 
                                      which(sim.data[, group.col.name] == g))
@@ -941,22 +542,7 @@
           p.vals[(g+1):n.groups] = length(free.groups) * 
             SingleProbTest(sim.data$Loss,
                            which(sim.data[, group.col.name] %in% free.groups))
-          # p.vals[(g+1):n.groups] = 0.5
         } # test all free groups as one 
-        
-        
-        # another idea: 
-        # hypothesis test for each set group
-        # hypothesis test for unset groups as one (all at once)
-        # assign to one (or split maybe) set groups IF
-        # p.val for unset groups (as a whole) is significant
-        # p.val for (at least one) set group is significant (for less than)
-        
-        # if(p.vals[[g]] > pValueThreshold){
-        #   p.vals[[g]] = 1
-        # }
-        # }
-        # new.probs[p, col.names] = (1 - p.vals) / sum(1 - p.vals)
         new.probs[p, col.names] = ifelse(p.vals < alpha, 0, 1) %>% 
           ProbVector()
       }
