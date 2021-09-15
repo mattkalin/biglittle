@@ -1,2 +1,4 @@
-# biglittle
-Algorithm for making big little pairings
+# Kalin's Big/Little Pairing Algorithm
+
+Watch the videos: 
+1. Introduction
