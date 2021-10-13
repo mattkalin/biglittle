@@ -6,6 +6,8 @@ Kalin's Big/Little algorithm was made by Matt Kalin in 2020 and was used to make
 First, make sure you have RStudio installed: https://www.rstudio.com/products/rstudio/download/
 Then, do the following:
 * Save the preferences excel sheet on your computer and update the folder.path and file.name variables in the R file accordingly (line 582)
+* In the event that there are more brothers requesting littles than pledges, you may want to choose which brothers do not get a little. To do this, simply delete those brothers' rows from the preferences sheet
+  * Another option is to leave it be and let the algorithm decide. The algorithm will make this decision completely based off the preferences. However, it might be a good idea to manually make this decision because of other factors such as giving higher priority to brothers who are older and are in smaller families. 
 * Make sure the preferences excel sheet is formatted like the Example data.xlsx file in this repo
   * One sheet titled "Brother" and the other sheet titled "Pledge"
   * Each name must be unique and spelled the same way throughout the sheet
@@ -21,7 +23,7 @@ Then, do the following:
     * If every big is eligible to get twins, set twins.elig = "all"
     * If one big is eligible to get twins, specify like twins.elig = "Howard"
     * If multiple specific bigs are eligible to get twins, specify like twins.elig = c("Howard", "George")
-* Run the following commands in the console (bottom of the RStudio window) in order to install a few packages. Each one might take a minute or so to run. 
+* Run the following commands in the console (bottom of the RStudio window) in order to install a few packages. Each one might take a minute or so to run.
   * install.packages("readxl")
   * install.packages("dplyr")
   * install.packages("beepr")
