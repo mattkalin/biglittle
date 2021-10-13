@@ -21,6 +21,10 @@ Then, do the following:
     * If every big is eligible to get twins, set twins.elig = "all"
     * If one big is eligible to get twins, specify like twins.elig = "Howard"
     * If multiple specific bigs are eligible to get twins, specify like twins.elig = c("Howard", "George")
+* Run the following commands in the console (bottom of the RStudio window) in order to install a few packages:
+  * install.packages("readxl")
+  * install.packages("dplyr")
+  * install.packages("beepr")
 * Once you have done all of this, run the algorithm by highlighting from the beginning of the R file through the comment "where the magic happens" (line 698) and clicking run (or command+Enter)
 
 
